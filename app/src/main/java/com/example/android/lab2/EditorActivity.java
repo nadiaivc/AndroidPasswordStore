@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2016 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.example.android.lab2;
 
 import android.app.AlertDialog;
@@ -28,11 +13,14 @@ import android.os.Bundle;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.text.method.HideReturnsTransformationMethod;
+import android.text.method.PasswordTransformationMethod;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.example.android.lab2.data.Lab2Contract.PassEntry;
@@ -51,7 +39,7 @@ public class EditorActivity extends AppCompatActivity implements
     private EditText mLoginEditText;
     private EditText mPassEditText;
     private EditText mNoteEditText;
-
+    boolean visibilityOff = false;
     private boolean mPassHasChanged = false;
 
     /**
@@ -73,6 +61,25 @@ public class EditorActivity extends AppCompatActivity implements
 
         Intent intent = getIntent();
         mCurrentPassUri = intent.getData();
+
+        final ImageButton hideOrShowPass = (ImageButton)findViewById(R.id.showPass);
+        hideOrShowPass.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (visibilityOff == false) {
+                    hideOrShowPass.setImageResource(R.drawable.ic_visibility_off);
+                    visibilityOff = true;
+                    //show Password
+                    mPassEditText.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
+                }
+                else {
+                    hideOrShowPass.setImageResource(R.drawable.ic_visibility);
+                    visibilityOff = false;
+                    mPassEditText.setTransformationMethod(PasswordTransformationMethod.getInstance());
+                }
+
+            }
+        });
 
         if (mCurrentPassUri == null) {
             setTitle(getString(R.string.editor_activity_title_new_pass));
