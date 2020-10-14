@@ -28,10 +28,10 @@ public class Lab2DbHelper extends SQLiteOpenHelper {
         // Create a String that contains the SQL statement to create the  table
         String SQL_CREATE_PASS_TABLE =  "CREATE TABLE " + PassEntry.TABLE_NAME + " ("
                 + PassEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-                + PassEntry.COLUMN_RES + " TEXT NOT NULL, "
-                + PassEntry.COLUMN_LOGIN + " TEXT, "
-                + PassEntry.COLUMN_PASSWORD+ " TEXT NOT NULL, "
-                + PassEntry.COLUMN_NOTES + " TEXT);";
+                + PassEntry.COLUMN_RES + " BLOB NOT NULL, "
+                + PassEntry.COLUMN_LOGIN + " BLOB, "
+                + PassEntry.COLUMN_PASSWORD+ " BLOB NOT NULL, "
+                + PassEntry.COLUMN_NOTES + " BLOB);";
 
         // Execute the SQL statement
         db.execSQL(SQL_CREATE_PASS_TABLE);

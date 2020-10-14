@@ -9,7 +9,9 @@ import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NavUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -24,6 +26,13 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 import com.example.android.lab2.data.Lab2Contract.PassEntry;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Allows user to create a new pass or edit an existing one.
@@ -41,7 +50,6 @@ public class EditorActivity extends AppCompatActivity implements
     private EditText mNoteEditText;
     boolean visibilityOff = false;
     private boolean mPassHasChanged = false;
-
     /**
      * OnTouchListener that listens for any user touches on a View, implying that they are modifying
      * the view, and we change the mPassHasChanged boolean to true.
@@ -58,7 +66,6 @@ public class EditorActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
-
         Intent intent = getIntent();
         mCurrentPassUri = intent.getData();
 
@@ -107,13 +114,31 @@ public class EditorActivity extends AppCompatActivity implements
         mNoteEditText.setOnTouchListener(mTouchListener);
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    private static byte[] encrypt(String str, String password) throws Exception {
+        byte[] iv_byte ={-10,127,13,4,-8,-34,67,99,105,-97,33,56,-23,87,-67,7};
+        byte[] source = str.getBytes();
+        // Превращаем пароль (произвольной длины) в ключ (256 бит)
+        byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8); // Превращаем пароль из строки в байты UTF-8
+        byte[] keyBytes = MessageDigest.getInstance("SHA-256").digest(passwordBytes); // Хэшируем байты пароля, на выходе имеем всегда 32 байта
+        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES"); // Так как это джава, тут любая вещь должна быть превращена в объект :/
 
+        Cipher cipher = Cipher.getInstance("AES/OFB/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv_byte)); // Инициализируем шифратор с заданным ключом и nonce
+        byte[] encryptedBytes = cipher.doFinal(source); // В общем-то, шифруем!
+
+
+        return encryptedBytes;
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     private boolean saveInfo() {
         // Read from input fields
         // Use trim to eliminate leading or trailing white space
         String resString = mResEditText.getText().toString().trim();
         String loginString = mLoginEditText.getText().toString().trim();
-        String passString = mPassEditText.getText().toString().trim();
+        String passString = mPassEditText.getText().toString();
         String notesString = mNoteEditText.getText().toString().trim();
 
         if (TextUtils.isEmpty(loginString))
@@ -133,11 +158,37 @@ public class EditorActivity extends AppCompatActivity implements
         if (TextUtils.isEmpty(notesString))
             notesString = "";
 
+        byte[] resStringbyte =null;
+        try {
+            resStringbyte = encrypt(resString, CatalogActivity.passString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        byte[] loginStringbyte=null;
+        try {
+            loginStringbyte = encrypt(loginString, CatalogActivity.passString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        byte[] passStringbyte=null;
+        try {
+            passStringbyte = encrypt(passString, CatalogActivity.passString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        byte[] notesStringbyte=null;
+        try {
+            notesStringbyte = encrypt(notesString, CatalogActivity.passString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         ContentValues values = new ContentValues();
-        values.put(PassEntry.COLUMN_RES, resString);
-        values.put(PassEntry.COLUMN_LOGIN, loginString);
-        values.put(PassEntry.COLUMN_PASSWORD, passString);
-        values.put(PassEntry.COLUMN_NOTES, notesString);
+        values.put(PassEntry.COLUMN_RES, resStringbyte);
+        values.put(PassEntry.COLUMN_LOGIN, loginStringbyte);
+        values.put(PassEntry.COLUMN_PASSWORD, passStringbyte);
+        values.put(PassEntry.COLUMN_NOTES, notesStringbyte);
 
         if (mCurrentPassUri == null) {
             Uri newUri = getContentResolver().insert(PassEntry.CONTENT_URI, values);
@@ -172,10 +223,6 @@ public class EditorActivity extends AppCompatActivity implements
         return true;
     }
 
-    /**
-     * This method is called after invalidateOptionsMenu(), so that the
-     * menu can be updated (some menu items can be hidden or made visible).
-     */
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         super.onPrepareOptionsMenu(menu);
@@ -187,6 +234,7 @@ public class EditorActivity extends AppCompatActivity implements
         return true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -219,9 +267,6 @@ public class EditorActivity extends AppCompatActivity implements
         return super.onOptionsItemSelected(item);
     }
 
-    /**
-     * This method is called when the back button is pressed.
-     */
     @Override
     public void onBackPressed() {
         if (!mPassHasChanged) {
@@ -261,6 +306,7 @@ public class EditorActivity extends AppCompatActivity implements
                 null);                  // Default sort order
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
         // Bail early if the cursor is null or there is less than 1 row in the cursor
@@ -275,11 +321,35 @@ public class EditorActivity extends AppCompatActivity implements
             int notesColumnIndex = cursor.getColumnIndex(PassEntry.COLUMN_NOTES);
 
             // Extract out the value from the Cursor for the given column index
-            String res = cursor.getString(resColumnIndex);
-            String login = cursor.getString(loginColumnIndex);
-            String pass = cursor.getString(passColumnIndex);
-            String notes = cursor.getString(notesColumnIndex);
+            byte[] resByte = cursor.getBlob(resColumnIndex);
+            byte[] loginByte = cursor.getBlob(loginColumnIndex);
+            byte[] passByte = cursor.getBlob(passColumnIndex);
+            byte[] notesByte = cursor.getBlob(notesColumnIndex);
 
+            String res = null;
+            try {
+                res = decrypt(resByte, CatalogActivity.passString);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String login = null;
+            try {
+                login = decrypt(loginByte, CatalogActivity.passString);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String pass = null;
+            try {
+                pass = decrypt(passByte, CatalogActivity.passString);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            String notes = null;
+            try {
+                notes = decrypt(notesByte, CatalogActivity.passString);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             // Update the views on the screen with the values from the database
             mResEditText.setText(res);
             mLoginEditText.setText(login);
@@ -289,13 +359,28 @@ public class EditorActivity extends AppCompatActivity implements
         }
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    private static String decrypt(byte[] encrypted, String password) throws Exception {
+        //byte[] encrypted = strEncrypted.getBytes();
+        byte[] passwordBytes = password.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = MessageDigest.getInstance("SHA-256").digest(passwordBytes);
+        SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+
+        Cipher cipher = Cipher.getInstance("AES/OFB/NoPadding");
+        byte[] iv_byte ={-10,127,13,4,-8,-34,67,99,105,-97,33,56,-23,87,-67,7};
+        //String iv = iv_byte.toString();
+        cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(iv_byte));
+        byte[] decryptedBytes = cipher.doFinal(encrypted);
+        return new String(decryptedBytes);
+    }
+
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         // If the loader is invalidated, clear out all the data from the input fields.
-        mResEditText.setText("");
+       /* mResEditText.setText("");
         mLoginEditText.setText("");
         mNoteEditText.setText("");
-        mPassEditText.setText("");
+        mPassEditText.setText("");*/
     }
 
     /**

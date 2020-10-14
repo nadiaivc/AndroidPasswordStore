@@ -17,12 +17,13 @@
             android:layout_height="wrap_content"
             android:text="@string/login_mes" />
 
-        <TextView
-            android:id="@+id/pass"
+        <EditText
+            android:id="@+id/pass_login"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             style="@style/EditorFieldStyle"
-            android:hint="@string/hint_pass" />
+            android:hint="@string/hint_pass"
+            android:inputType="textPassword"/>
 
         <Button
             android:id="@+id/entry_btn"
