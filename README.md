@@ -29,4 +29,8 @@
 	!!! If you know something more appropriate and logical for local login, please tell me!
 	
 	
+	5.
+	Func for changing the main password (OptionsItemSelected)
+	-> all elements in the DB decrypt with the previous password -> all elements encrypt with the new password
+	
 	
