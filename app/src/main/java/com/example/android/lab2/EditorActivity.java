@@ -225,7 +225,7 @@ public class EditorActivity extends AppCompatActivity implements
             // "Up" button in the app bar
             case android.R.id.home:
                 if (!mPassHasChanged) {
-                    NavUtils.navigateUpFromSameTask(EditorActivity.this);
+                    super.onBackPressed();//чисто пох
                     return true;
                 }
 
@@ -344,13 +344,6 @@ public class EditorActivity extends AppCompatActivity implements
         mPassEditText.setText("");*/
     }
 
-    /**
-     * Show a dialog that warns the user there are unsaved changes that will be lost
-     * if they continue leaving the editor.
-     *
-     * @param discardButtonClickListener is the click listener for what to do when
-     *                                   the user confirms they want to discard their changes
-     */
     private void showUnsavedChangesDialog(
             DialogInterface.OnClickListener discardButtonClickListener) {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);

@@ -33,29 +33,32 @@ public class PassCursorAdapter extends CursorAdapter {
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
+        int resColumnIndex = 0;
+        int loginColumnIndex = 0;
+        String resStr = null;
+        String loginStr = null;
+
         // Find individual views that we want to modify in the list item layout
         TextView nameTextView = (TextView) view.findViewById(R.id.name);
         TextView summaryTextView = (TextView) view.findViewById(R.id.summary);
 
-        int resColumnIndex = cursor.getColumnIndex(PassEntry.COLUMN_RES);
-        int loginColumnIndex = cursor.getColumnIndex(PassEntry.COLUMN_LOGIN);
+        resColumnIndex = cursor.getColumnIndex(PassEntry.COLUMN_RES);
+        loginColumnIndex = cursor.getColumnIndex(PassEntry.COLUMN_LOGIN);
 
         byte[] res = cursor.getBlob(resColumnIndex);
         byte[] login = cursor.getBlob(loginColumnIndex);
 
-        String resStr=null;
         try {
             resStr = EncryptOrDecrypt.decrypt(res, CatalogActivity.passString);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        String loginStr = null;
+
         try {
             loginStr = EncryptOrDecrypt.decrypt(login, CatalogActivity.passString);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
 
         if (TextUtils.isEmpty(loginStr)) {
             loginStr = "";
@@ -63,6 +66,8 @@ public class PassCursorAdapter extends CursorAdapter {
 
         nameTextView.setText(resStr);
         summaryTextView.setText(loginStr);
+
+
     }
 
 }

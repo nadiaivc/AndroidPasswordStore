@@ -13,7 +13,9 @@
     <!-- Name for the application [CHAR LIMIT=12] -->
     <string name="app_name">Lab2</string>
 
-    <string name="action_insert_dummy_data">Insert Dummy Data</string>
+    <string name="action_insert_data">Insert data</string>
+
+    <string name="action_export_data">Export data</string>
 
     <string name="action_delete_all_entries">Delete All Password</string>
 
@@ -71,6 +73,8 @@
     <!-- Text hint for name field in the editor [CHAR LIMIT=30] -->
     <string name="hint_pass">Password</string>
 
+    <string name="new_pass">New password:</string>
+
     <string name="res_empty">The resources field cannot be empty</string>
 
     <string name="pass_empty">The password field cannot be empty</string>
@@ -78,4 +82,6 @@
     <string name="hint_notes">Notes</string>
     <string name="login_mes">Please enter your password.Be careful! If this is your first login, then this password will be used to login</string>
     <string name="button_entry">Entry</string>
+    <string name="action_change_password">Change password</string>
+    <string name="button_change">Change</string>
 </resources>
