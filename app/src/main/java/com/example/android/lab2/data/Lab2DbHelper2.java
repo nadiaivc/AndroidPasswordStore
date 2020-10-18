@@ -7,19 +7,19 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.example.android.lab2.data.Lab2Contract.PassEntry;
 
-public class Lab2DbHelper extends SQLiteOpenHelper {
+public class Lab2DbHelper2 extends SQLiteOpenHelper {
 
-    public static final String LOG_TAG = Lab2DbHelper.class.getSimpleName();
+    public static final String LOG_TAG = Lab2DbHelper2.class.getSimpleName();
 
-    private static final String DATABASE_NAME = "passwords.db";
+    private static final String DATABASE_NAME = "pass.db";
     private static final int DATABASE_VERSION = 1;
 
     /**
-     * Constructs a new instance of {@link Lab2DbHelper}.
+     * Constructs a new instance of {@link Lab2DbHelper2}.
      *
      * @param context of the app
      */
-    public Lab2DbHelper(Context context) {
+    public Lab2DbHelper2(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 

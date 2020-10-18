@@ -28,7 +28,7 @@ public class Lab2Provider extends ContentProvider {
 
     /** Database helper object */
     private Lab2DbHelper mDbHelper;
-
+    private Lab2DbHelper2 mDbHelper2;
     @Override
     public boolean onCreate() {
         mDbHelper = new Lab2DbHelper(getContext());

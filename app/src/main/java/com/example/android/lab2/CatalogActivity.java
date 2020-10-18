@@ -1,5 +1,6 @@
 package com.example.android.lab2;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.LoaderManager;
 import android.content.ContentUris;
@@ -10,15 +11,19 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.Loader;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Xml;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -30,15 +35,25 @@ import android.widget.Toast;
 
 import com.example.android.lab2.data.Lab2Contract.PassEntry;
 
+import org.xmlpull.v1.XmlSerializer;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Base64;
+
+
+
+
 public class CatalogActivity extends AppCompatActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
+    private final int MY_PERMISSIONS_EXTERNAL_STORAGE = 1;
 
     private static final int PASS_LOADER = 0;
     PassCursorAdapter mCursorAdapter;
     public static String passString;
     public static String previousPass;
-
     //private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
     //private static final String ALIAS = "test-key";
     //private static final String TRANSFORMATION = "AES/CBC/PKCS7Padding";
@@ -54,6 +69,16 @@ public class CatalogActivity extends AppCompatActivity implements
         Intent intent = getIntent();
         passString = intent.getStringExtra("pass");
         String checkString = "Hello! It is my string!";
+
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED)
+        {
+            ActivityCompat.requestPermissions(
+                    this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_EXTERNAL_STORAGE);
+        }
+
 
         /* try {
             keyStore = KeyStore.getInstance("AndroidKeyStore");
@@ -148,10 +173,13 @@ public class CatalogActivity extends AppCompatActivity implements
         });
 
         getLoaderManager().initLoader(PASS_LOADER, null, this);
+
     }
 
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     private void insertPass() {
+
     }
 
     private void deleteAllPass() {
@@ -166,6 +194,7 @@ public class CatalogActivity extends AppCompatActivity implements
         return true;
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -178,11 +207,143 @@ public class CatalogActivity extends AppCompatActivity implements
             case R.id.action_change_password:
                 changePass();
                 return true;
-            /*case R.id.action_export:
-
-                return true;*/
+            case R.id.action_export:
+                try {
+                    exportDatabase();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void exportData(String fileName) {
+        try {
+            File download_folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File data = Environment.getDataDirectory();
+            XmlSerializer serial = Xml.newSerializer();
+
+            if (download_folder.canWrite()) {
+                File backupDB = new File(download_folder, fileName);
+                //File currentDB = getDatabasePath("pass.db");
+                FileOutputStream fileos = new FileOutputStream(backupDB);
+
+                try {
+                    serial.setOutput(fileos, null);
+                    serial.startDocument(null, null);
+                    serial.startTag(null, "resources");
+
+
+                    String[] projection = {
+                            PassEntry._ID,
+                            PassEntry.COLUMN_RES,
+                            PassEntry.COLUMN_LOGIN,
+                            PassEntry.COLUMN_PASSWORD,
+                            PassEntry.COLUMN_NOTES};
+                    String resStr = null;
+                    String loginStr = null;
+                    Cursor loopCursor = getContentResolver().query(PassEntry.CONTENT_URI, projection, null, null);
+
+
+                    if (loopCursor.moveToFirst()) {
+                        int idLoop = 0;
+                        do {
+                            int idColumnIndex = loopCursor.getColumnIndex(PassEntry._ID);
+                            idLoop = loopCursor.getInt(idColumnIndex);
+
+
+                            int resColumnIndex = loopCursor.getColumnIndex(PassEntry.COLUMN_RES);
+                            int loginColumnIndex = loopCursor.getColumnIndex(PassEntry.COLUMN_LOGIN);
+                            int passColumnIndex = loopCursor.getColumnIndex(PassEntry.COLUMN_PASSWORD);
+                            int notesColumnIndex = loopCursor.getColumnIndex(PassEntry.COLUMN_NOTES);
+
+                            byte[] resByte = loopCursor.getBlob(resColumnIndex);
+                            byte[] loginByte = loopCursor.getBlob(loginColumnIndex);
+                            byte[] passByte = loopCursor.getBlob(passColumnIndex);
+                            byte[] notesByte = loopCursor.getBlob(notesColumnIndex);
+
+                            String toStr = null;
+
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                toStr = Base64.getEncoder().encodeToString(resByte);
+                                serial.attribute(null, "res", toStr);
+                                toStr = Base64.getEncoder().encodeToString(loginByte);
+                                serial.attribute(null, "login", toStr);
+                                toStr = Base64.getEncoder().encodeToString(passByte);
+                                serial.attribute(null, "pass", toStr);
+                                toStr = Base64.getEncoder().encodeToString(notesByte);
+                                serial.attribute(null, "notes", toStr);
+
+                            }
+                        } while (loopCursor.moveToNext());
+
+                        serial.endTag(null, "resources");
+                        serial.endDocument();
+                        serial.flush();
+                        fileos.close();
+                    }
+                /*File backupDB = new File(download_folder, backupDBPath);
+
+                if (currentDB.exists()) {
+                    FileChannel src = new FileInputStream(currentDB).getChannel();
+                    FileChannel dst = new FileOutputStream(backupDB).getChannel();
+                    dst.transferFrom(src, 0, src.size());
+                    src.close();
+                    dst.close();
+                }*/
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    //export to Download
+    public void exportDatabase() throws IOException {
+
+
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "App has no permission",
+                    Toast.LENGTH_SHORT).show();
+        }
+        else {
+            LayoutInflater li = LayoutInflater.from(this);
+            View promptsView = li.inflate(R.layout.dialog_export_data, null);
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setView(promptsView);
+            final EditText userInput = (EditText) promptsView.findViewById(R.id.file_name);
+            builder.setCancelable(false)
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @RequiresApi(api = Build.VERSION_CODES.O)
+                        public void onClick(DialogInterface dialog, int id) {
+                            String fileName = userInput.getText().toString();
+                            if (TextUtils.isEmpty(fileName)) {
+                                return;
+                            }
+                            fileName = fileName + ".xml";
+                            exportData(fileName);
+                        }
+                    })
+                    .setNegativeButton("Cancel",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                }
+                            });
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        }
     }
 
 
