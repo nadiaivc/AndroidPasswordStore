@@ -35,4 +35,4 @@
 	
 	
 	6.
-	Func for exporting data from a DB (XML format)
+	Func for exporting data from a DB to Download directory (XML format)
