@@ -34,3 +34,5 @@
 	-> all elements in the DB decrypt with the previous password -> all elements encrypt with the new password
 	
 	
+	6.
+	Func for exporting data from a DB to Download directory (XML format)
