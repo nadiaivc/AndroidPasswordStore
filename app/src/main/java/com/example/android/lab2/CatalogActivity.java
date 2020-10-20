@@ -35,15 +35,22 @@ import android.widget.Toast;
 
 import com.example.android.lab2.data.Lab2Contract.PassEntry;
 
+import org.xml.sax.SAXException;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.Base64;
 
-
+import javax.xml.parsers.ParserConfigurationException;
 
 
 public class CatalogActivity extends AppCompatActivity implements
@@ -177,15 +184,183 @@ public class CatalogActivity extends AppCompatActivity implements
     }
 
 
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private void insertPass() {
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    //import from Download
+    public void importDatabase() throws IOException {
+
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "App has no permission",
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        else {
+            LayoutInflater li = LayoutInflater.from(this);
+            View promptsView = li.inflate(R.layout.dialog_export_data, null);
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setView(promptsView);
+            final EditText userInput = (EditText) promptsView.findViewById(R.id.file_name);
+            builder.setCancelable(false)
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @RequiresApi(api = Build.VERSION_CODES.O)
+                        public void onClick(DialogInterface dialog, int id) {
+                            String fileName = userInput.getText().toString();
+                            if (TextUtils.isEmpty(fileName)) {
+                                return;
+                            }
+                            fileName = fileName + ".xml";
+                            insertPass(fileName);
+                        }
+                    })
+                    .setNegativeButton("Cancel",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    dialog.cancel();
+                                }
+                            });
+            AlertDialog alertDialog = builder.create();
+            alertDialog.show();
+        }
     }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void insertPass(String fileName) {
+        try {
+            XmlPullParser xpp = prepareXpp(fileName);
+            if (xpp == null)
+                return;
+            String helper = null;
+            String resStr = null;
+            String loginStr = null;
+            String passStr = null;
+            String notesStr = null;
+            byte[] getPassByte = new byte[0];
+            byte[] getNotesByte = new byte[0];
+            byte[] getLoginByte = new byte[0];
+            byte[] getResByte = new byte[0];
+            while (xpp.getEventType() != XmlPullParser.END_DOCUMENT) {
+                switch (xpp.getEventType()) {
+                    // начало документа
+                    case XmlPullParser.START_DOCUMENT:
+                        break;
+                    // начало тэга
+                    case XmlPullParser.START_TAG:
+                        helper = xpp.getName();
+                        int i;
+                        for (i = 0; i < xpp.getAttributeCount(); i+=4) {
+                            for (int j = 0; j < 4 ; j++) {
+                                helper = xpp.getAttributeName(i+j);
+                                switch (helper) {
+                                    case "res":
+                                        resStr = xpp.getAttributeValue(i+j);
+
+                                        getResByte = Base64.getDecoder().decode(resStr);
+
+                                        break;
+                                    case "login":
+                                        loginStr = xpp.getAttributeValue(i+j);
+                                        if (loginStr.isEmpty()){
+                                            Toast.makeText(this, "login is empty",
+                                                    Toast.LENGTH_SHORT).show();
+                                            return;
+                                        }
+                                        getLoginByte = Base64.getDecoder().decode(loginStr);
+                                        break;
+                                    case "pass":
+                                        passStr = xpp.getAttributeValue(i+j);
+                                        if (passStr.isEmpty()){
+                                            Toast.makeText(this, "password is empty",
+                                                    Toast.LENGTH_SHORT).show();
+                                            return;
+                                        }
+                                        getPassByte = Base64.getDecoder().decode(passStr);
+                                        break;
+                                    case "notes":
+                                        notesStr = xpp.getAttributeValue(i+j);
+                                        getNotesByte = Base64.getDecoder().decode(notesStr);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+
+                                ContentValues values = new ContentValues();
+                                values.put(PassEntry.COLUMN_RES, getResByte);
+                                values.put(PassEntry.COLUMN_LOGIN, getLoginByte);
+                                values.put(PassEntry.COLUMN_PASSWORD, getPassByte);
+                                values.put(PassEntry.COLUMN_NOTES, getNotesByte);
+
+                                    Uri newUri = getContentResolver().insert(PassEntry.CONTENT_URI, values);
+
+                                    if (newUri == null) {
+                                        Toast.makeText(this, getString(R.string.editor_insert_pass_failed),
+                                                Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        Toast.makeText(this, getString(R.string.editor_insert_pass_successful),
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+
+                        }
+
+                    case XmlPullParser.END_TAG:
+                        break;
+                    case XmlPullParser.TEXT:
+                        break;
+                    default:
+                        break;
+                }
+                xpp.next();
+            }
+        } catch (XmlPullParserException | SAXException | IOException | ParserConfigurationException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+    XmlPullParser prepareXpp(String fileName) throws IOException, ParserConfigurationException, SAXException, XmlPullParserException {
+        File download_folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File f = new File(download_folder, fileName);
+        String line = null;
+        if (!f.exists()) {
+            Toast.makeText(this, "File not found for reading",
+                Toast.LENGTH_SHORT).show();
+            return null;
+        }
+            try {
+                FileReader fis = new FileReader(f);
+                BufferedReader bufRead = new BufferedReader(fis, 100);
+
+                try {
+                    line = bufRead.readLine();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.v(this.toString(), "IOException found in reading line from file.");
+                }
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+
+            }
+
+        XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+        factory.setNamespaceAware(true);
+        XmlPullParser xpp = factory.newPullParser();
+        xpp.setInput( new StringReader( line ) );
+
+        return xpp;
+    }
+
+
+
 
     private void deleteAllPass() {
         int rowsDeleted = getContentResolver().delete(PassEntry.CONTENT_URI, null, null);
         Log.v("CatalogActivity", rowsDeleted + " rows deleted from pass database");
     }
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -194,12 +369,19 @@ public class CatalogActivity extends AppCompatActivity implements
         return true;
     }
 
+
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_insert_dummy_data:
-                insertPass();
+                try {
+                    importDatabase();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
                 return true;
             case R.id.action_delete_all_entries:
                 deleteAllPass();
@@ -219,11 +401,14 @@ public class CatalogActivity extends AppCompatActivity implements
     }
 
 
+
+
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     private void exportData(String fileName) {
         try {
             File download_folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File data = Environment.getDataDirectory();
+            //File data = Environment.getDataDirectory();
             XmlSerializer serial = Xml.newSerializer();
 
             if (download_folder.canWrite()) {
@@ -285,15 +470,7 @@ public class CatalogActivity extends AppCompatActivity implements
                         serial.flush();
                         fileos.close();
                     }
-                /*File backupDB = new File(download_folder, backupDBPath);
 
-                if (currentDB.exists()) {
-                    FileChannel src = new FileInputStream(currentDB).getChannel();
-                    FileChannel dst = new FileOutputStream(backupDB).getChannel();
-                    dst.transferFrom(src, 0, src.size());
-                    src.close();
-                    dst.close();
-                }*/
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
@@ -304,6 +481,9 @@ public class CatalogActivity extends AppCompatActivity implements
             e.printStackTrace();
         }
     }
+
+
+
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     //export to Download

@@ -12,7 +12,6 @@
 
     <EditText
         android:id="@+id/file_name"
-        android:inputType="textPassword"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
