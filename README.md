@@ -36,3 +36,7 @@
 	
 	6.
 	Func for exporting data from a DB to Download directory (XML format)
+	
+	
+	7. 
+	Func for importing data from a Download directory to DB (XML format)	
